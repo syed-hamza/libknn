@@ -1,0 +1,13 @@
+Train:
+    - Iterate through samples
+    - Calculate distance from origin
+        - no need to calculate root
+    - Populate Hash map
+        - Key: vector
+            - use murmur hash
+        - Value: tuple (distance, class)
+
+Inference:
+    - Find distance of current point from rest
+    - Sort vector
+    - Find most appearing class from top K indices
