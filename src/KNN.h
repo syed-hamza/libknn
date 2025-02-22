@@ -1,35 +1,38 @@
 #ifndef KNN_H
 #define KNN_H
 
-#include "Sample.h"
 #include <vector>
 #include <iostream>
 #include <cstdint>
+#include <cmath>
+#include <unordered_set>
+#include <algorithm>
+#include <map>
+#include <utility>
 
 class KNN {
 private:
-    std::vector<Sample> _feature_target_pairs;
-    size_t _num_samples;
+    std::vector<std::vector<float>> _X;
+    std::vector<float> _y;
+
     size_t _num_features;
+    size_t _num_samples;
+
+    std::vector<float> _classes;
 
     std::uint32_t _k;
 
-    float _sum(const std::vector<float>& vec);
-    float _dot(const std::vector<float>& A, const std::vector<float>& B);
-    
-    std::vector<float> _square(const std::vector<float>& vec);
+    float _euclidean_distance(const std::vector<float>& A, const std::vector<float>& B, const bool& calculate_root = true);
 
 public:
-    KNN();
 
-    KNN(const std::uint32_t k);
+    KNN(const std::vector<std::vector<float>>& X, const std::vector<float>& y, const size_t& K=0);
 
-    void fit(const std::vector<std::vector<float>>& X, const std::vector<int>& y);
+    KNN(const KNN& other);
 
-    bool predict(const std::vector<float>& X, const float y);
-
-    std::vector<bool> predict(const std::vector<std::vector<float>>& X, const std::vector<float>& y);
+    float operator()(const std::vector<float>& X);
+    std::vector<float> operator()(const std::vector<std::vector<float>>& X);
 
 };
 
-#endif KNN_H
+#endif

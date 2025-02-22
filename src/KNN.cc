@@ -1,54 +1,90 @@
 #include "KNN.h"
 
 // PRIVATE
-float KNN::_sum(const std::vector<float>& vec) {
-    float sum = 0.0f;
-    
-    for(const float x : vec)
-        sum += x;
-    
-    return sum;
-}
-
-float KNN::_dot(const std::vector<float>& A, const std::vector<float>& B) {
-    if(A.size() != B.size()) {
-        throw std::invalid_argument("Lenghts of vectors not equal");
+float KNN::_euclidean_distance(
+    const std::vector<float>& A, 
+    const std::vector<float>& B, 
+    const bool& calculate_root
+){
+    if (A.size() != B.size()) {
+        throw std::invalid_argument("Vector size mismatch: A has " + 
+            std::to_string(A.size()) + ", B has " + std::to_string(B.size()));
     }
-    
-    float sum = 0.0f;
-    
-    for(size_t i = 0; i < A.size(); i++)
-        sum += (A[i] * B[i]);
 
-    return sum;
-}
+    float distance = 0.0f;
 
-std::vector<float> KNN::_square(const std::vector<float>& vec){
-    std::vector<float> res(vec.size());
+    for(size_t i = 0; i < A.size(); i++){
+        float diff = A[i] - B[i];
+        distance += diff * diff;
+    }
 
-    for(size_t i = 0; i < vec.size(); i++)
-        res[i] = vec[i] * vec[i];
-
-    return res;
+    return calculate_root ? std::sqrt(distance) : distance;
 }
 
 // PUBLIC
-KNN::KNN() : _num_features(0), _num_samples(0) {
-    _feature_target_pairs.reserve(_num_samples);
+KNN::KNN(const std::vector<std::vector<float>>& X, const std::vector<float>& y, const size_t& K): _X(X), _y(y) {
+    if(K == 0) { _k = std::sqrt(X.size()); }
+    else { _k = K; }
+
+    _num_samples = X.size();
+    _num_features = X[0].size();
+
+    std::unordered_set<float> unique_set(y.begin(), y.end());
+    _classes =  std::vector<float>(unique_set.begin(), unique_set.end());
 }
 
-KNN::KNN(const std::uint32_t k) : _k(k), _num_features(0), _num_samples(0) {
-    _feature_target_pairs.reserve(_num_samples);
-};
 
-void KNN::fit(const std::vector<std::vector<float>>& X, const std::vector<int>& y){
+KNN::KNN(const KNN& other) 
+    : _X(other._X), _y(other._y), _k(other._k), 
+      _num_features(other._num_features), 
+      _num_samples(other._num_samples), _classes(other._classes){};
 
+
+float KNN::operator()(const std::vector<float>& X) {
+    std::vector<std::pair<float, float>> distances(_num_samples);
+
+    // Compute distances
+    for (size_t i = 0; i < _num_samples; i++) {
+        distances[i] = {_euclidean_distance(X, _X[i], false), _y[i]};
+    }
+
+    // Sort by distance (ascending)
+    std::sort(
+        distances.begin(), 
+        distances.end(),
+        [](const std::pair<float, float>& a, const std::pair<float, float>& b) {
+            return a.first < b.first;
+        }
+    );
+
+    // Count votes
+    std::map<float, size_t> votes;
+    for (size_t i = 0; i < _k; i++) {
+        votes[distances[i].second]++;
+    }
+
+    // Find the class with the most votes
+    float predicted_class = -1;
+    size_t max_votes = 0;
+
+    for (const auto& [class_, count] : votes) {
+        if (count > max_votes) {
+            max_votes = count;
+            predicted_class = class_;
+        }
+    }
+
+    return predicted_class;
 }
 
-bool KNN::predict(const std::vector<float>& X, const float y){
 
-}
+std::vector<float> KNN::operator()(const std::vector<std::vector<float>>& X) {
+    std::vector<float> predictions;
+    predictions.reserve(X.size());  // Reserve space for efficiency
 
-std::vector<bool> KNN::predict(const std::vector<std::vector<float>>& X, const std::vector<float>& y){
-    
+    for (const auto& sample : X) {
+        predictions.push_back((*this)(sample));  // Call the single-sample operator()
+    }
+
+    return predictions;
 }
