@@ -21,6 +21,27 @@ float KNN::_euclidean_distance(
     return calculate_root ? std::sqrt(distance) : distance;
 }
 
+float KNN::_get_majority(const std::vector<std::pair<float, float>>& distances){
+    std::map<float, size_t> votes;
+    for (size_t i = 0; i < _k; i++) {
+        votes[distances[i].second]++;
+    }
+
+    // Find the class with the most votes
+    float predicted_class = -1;
+    size_t max_votes = 0;
+
+    for (const auto& [class_, count] : votes) {
+        if (count > max_votes) {
+            max_votes = count;
+            predicted_class = class_;
+        }
+    }
+
+    return predicted_class;
+}
+
+
 // PUBLIC
 KNN::KNN(const std::vector<std::vector<float>>& X, const std::vector<float>& y, const size_t& K): _X(X), _y(y) {
     if(K == 0) { _k = std::sqrt(X.size()); }
@@ -57,33 +78,15 @@ float KNN::operator()(const std::vector<float>& X) {
         }
     );
 
-    // Count votes
-    std::map<float, size_t> votes;
-    for (size_t i = 0; i < _k; i++) {
-        votes[distances[i].second]++;
-    }
-
-    // Find the class with the most votes
-    float predicted_class = -1;
-    size_t max_votes = 0;
-
-    for (const auto& [class_, count] : votes) {
-        if (count > max_votes) {
-            max_votes = count;
-            predicted_class = class_;
-        }
-    }
-
-    return predicted_class;
+    return _get_majority(distances);
 }
 
 
 std::vector<float> KNN::operator()(const std::vector<std::vector<float>>& X) {
-    std::vector<float> predictions;
-    predictions.reserve(X.size());  // Reserve space for efficiency
+    std::vector<float> predictions(X.size());  
 
-    for (const auto& sample : X) {
-        predictions.push_back((*this)(sample));  // Call the single-sample operator()
+    for(size_t i = 0; i < X.size(); i++){
+        predictions[i] = (*this)(X[i]);
     }
 
     return predictions;

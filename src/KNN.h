@@ -23,6 +23,8 @@ private:
     std::uint32_t _k;
 
     float _euclidean_distance(const std::vector<float>& A, const std::vector<float>& B, const bool& calculate_root = true);
+    
+    float _get_majority(const std::vector<std::pair<float, float>>& distances);
 
 public:
 
