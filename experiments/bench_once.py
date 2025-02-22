@@ -48,8 +48,8 @@ def execute_experiment(params):
 
 if __name__ == "__main__":
     params = {
-        "m": 20000,
-        "n": 50,
+        "m": 1000,
+        "n": 10,
         "algorithm": "brute",
         "iters": 500
     }

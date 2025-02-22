@@ -1,128 +1,147 @@
-#include <iostream>
-#include <npy.hpp>
+#include <chrono>
 #include <vector>
-#include <string>
-#include <stdexcept>
-#include <algorithm>
-#include <map>
+#include <iostream>
+#include <numeric>
+#include <cmath>
+#include <iomanip>
+#include <npy.hpp>
 
-class Sample{
-public:
-    float square_norm;
-    int target;
+#include "KNN.h"
 
-    Sample() : square_norm(0.0f), target(-1.0f) {};
-
-    Sample(const float square_norm, const int target)
-        : square_norm(square_norm), target(target) {};
-
-    bool operator<(const Sample& other) const {
-        return square_norm < other.square_norm;
-    }
-};
-
-void parse_npy(
-    const std::vector<float>& flat_matrix, 
-    std::vector<std::vector<float>>& matrix, 
-    const size_t rows,
-    const size_t cols
-){
-    if (rows * cols != flat_matrix.size()) {
-        throw std::invalid_argument("Size mismatch: Cannot reshape 1D array into given dimensions.");
+std::vector<std::vector<float>> reshape(const std::vector<float> &flat_matrix, const size_t &num_columns)
+{
+    if (flat_matrix.size() % num_columns != 0)
+    {
+        throw std::invalid_argument("The flat matrix cannot be divided evenly");
     }
 
-    for (size_t i = 0; i < rows; i++) {  
-        for (size_t j = 0; j < cols; j++) {  
-            matrix[i][j] = flat_matrix[i * cols + j];  
+    size_t num_rows = flat_matrix.size() / num_columns;
+    std::vector<std::vector<float>> reshaped_matrix(num_rows, std::vector<float>(num_columns));
+
+    for (size_t i = 0; i < num_rows; i++)
+    {
+        for (size_t j = 0; j < num_columns; j++)
+        {
+            reshaped_matrix[i][j] = flat_matrix[i * num_columns + j];
         }
     }
+
+    return reshaped_matrix;
 }
 
-class KNN {
-private:
-    std::vector<Sample> _feature_target_pairs;
-    size_t _num_samples;
-    size_t _num_features;
+void bench(const std::vector<std::vector<float>> &X_train,
+           const std::vector<float> &y_train,
+           const std::vector<std::vector<float>> &X_test,
+           const int num_iterations)
+{
 
-    float _sum(const std::vector<float>& vec){
-        float sum = 0.0f;
-        for(const float x : vec)
-            sum += x * x;
-        return sum;
+    std::vector<double> train_times, predict_times;
+
+    for (int i = 0; i < num_iterations; i++)
+    {
+        // Start timing training
+        auto start_train = std::chrono::high_resolution_clock::now();
+        KNN model(X_train, y_train, 0); // Training
+        auto end_train = std::chrono::high_resolution_clock::now();
+
+        // Calculate training time
+        double train_time = std::chrono::duration<double, std::milli>(end_train - start_train).count();
+        train_times.push_back(train_time);
+
+        // Start timing prediction
+        auto start_pred = std::chrono::high_resolution_clock::now();
+        std::vector<float> preds = model(X_test); // Prediction
+        auto end_pred = std::chrono::high_resolution_clock::now();
+
+        // Calculate prediction time
+        double pred_time = std::chrono::duration<double, std::milli>(end_pred - start_pred).count();
+        predict_times.push_back(pred_time);
     }
 
-    float _dot(const std::vector<float>& A, const std::vector<float>& B){
-        if(A.size() != B.size()){
-            throw std::invalid_argument("Lengths of vectors unequal.");
+    // Compute mean and standard deviation
+    auto mean_std = [](const std::vector<double> &times)
+    {
+        double mean = std::accumulate(times.begin(), times.end(), 0.0) / times.size();
+        double variance = std::accumulate(times.begin(), times.end(), 0.0,
+                                          [mean](double acc, double x)
+                                          { return acc + (x - mean) * (x - mean); }) /
+                          times.size();
+        double std_dev = std::sqrt(variance);
+        return std::make_pair(mean, std_dev);
+    };
+
+    auto [train_mean, train_std] = mean_std(train_times);
+    auto [pred_mean, pred_std] = mean_std(predict_times);
+
+    // Print formatted results
+    std::cout << "===== Experiment Parameters =====" << std::endl;
+    std::cout << std::left << std::setw(24) << "Number of samples" << ": " << X_train.size() + X_test.size() << std::endl;
+    std::cout << std::left << std::setw(24) << "Number of features" << ": " << X_train[0].size() << std::endl;
+    std::cout << std::left << std::setw(24) << "Number of iterations" << ": " << num_iterations << std::endl;
+    std::cout << std::left << std::setw(24) << "Algorithm" << ": brute" << std::endl;
+
+    std::cout << "===== Performance Statistics =====" << std::endl;
+    std::cout << std::fixed << std::setprecision(3);
+    std::cout << std::left << std::setw(24) << "Fit Time (Mean)" << ": " << std::setw(8) << train_mean << " ms" << std::endl;
+    std::cout << std::left << std::setw(24) << "Fit Time (Std Dev)" << ": " << std::setw(8) << train_std << " ms" << std::endl;
+    std::cout << std::left << std::setw(24) << "Inference Time (Mean)" << ": " << std::setw(8) << pred_mean << " ms" << std::endl;
+    std::cout << std::left << std::setw(24) << "Inference Time (Std Dev)" << ": " << std::setw(8) << pred_std << " ms" << std::endl;
+}
+
+int main()
+{
+
+    const size_t num_features = 10;
+    const size_t num_samples = 1000;
+    const int num_iterations = 500; // Number of iterations for benchmarking
+
+    std::string X_path = "../data/X.npy";
+    std::string y_path = "../data/y.npy";
+
+    auto X_flat = npy::read_npy<float>(X_path);
+    auto y_flat = npy::read_npy<float>(y_path);
+
+    std::vector<std::vector<float>> X = reshape(X_flat.data, num_features);
+    std::vector<float> y = y_flat.data;
+
+    const size_t num_train = 800;
+
+    std::vector<std::vector<float>> X_train;
+    std::vector<float> y_train;
+    std::vector<std::vector<float>> X_test;
+    std::vector<float> y_test;
+
+    for (size_t i = 0; i < num_samples; i++)
+    {
+        if (i < num_train)
+        {
+            X_train.push_back(X[i]);
+            y_train.push_back(y[i]);
         }
-        
-        float sum = 0.0f;
-        size_t len = A.size();
-        for(size_t i = 0; i < len; i++){
-            sum += A[i] * B[i];
+        else
+        {
+            X_test.push_back(X[i]);
+            y_test.push_back(y[i]);
         }
-        return sum;
     }
 
-public:
-    size_t k;
+    // Call benchmark function
+    bench(X_train, y_train, X_test, num_iterations);
 
-    KNN(const size_t k) : k(k) {};
+    // // Train and predict
+    // KNN model(X_train, y_train, 0);
+    // std::vector<float> preds = model(X_test);
 
-    void fit(
-        const std::vector<std::vector<float>>& X,
-        const std::vector<int>& y
-    ) {
-        _num_samples = y.size();
-        _num_features = X[0].size();
+    // // Print results with color formatting
+    // std::cout << "\033[1mTruth  : Predicted\033[0m\n"; // Bold header
+    // for(size_t i = 0; i < y_test.size(); i++){
+    //     if (static_cast<int>(y_test[i]) == static_cast<int>(preds[i])) {
+    //         std::cout << "\033[32m"; // Green for correct predictions
+    //     } else {
+    //         std::cout << "\033[31m"; // Red for incorrect predictions
+    //     }
+    //     std::cout << static_cast<int>(y_test[i]) << " : " << static_cast<int>(preds[i]) << "\033[0m" << std::endl;
+    // }
 
-        _feature_target_pairs.resize(_num_samples);
-
-        for(size_t i = 0; i < _num_samples; i++){
-            float square_norm = _sum(X[i]);
-            _feature_target_pairs[i] = Sample(square_norm, y[i]);
-        }
-    }
-
-    int predict(const std::vector<float>& X){
-        std::vector<Sample> distances(_num_samples);
-        for(size_t i = 0; i < _num_samples; i++){   
-            distances[i] = Sample(
-                _feature_target_pairs[i].square_norm - 2 * _dot(X, X) + _sum(X),
-                _feature_target_pairs[i].target
-            );
-        }
-
-        std::map<int, size_t> votes;
-        std::sort(distances.begin(), distances.end());
-        for(size_t i = 0; i < k; i++){
-            votes[distances[i].target]++;
-        }
-
-        return std::max_element(votes.begin(), votes.end(),
-            [](const auto& a, const auto& b) { return a.second < b.second; })->first;
-    }
-};
-
-int main(){
-    std::string X_path = "data/X.npy";
-    std::string y_path = "data/y.npy";
-
-    auto X = npy::read_npy<float>(X_path);
-    auto y = npy::read_npy<int>(y_path);
-
-    std::vector<float> X_data = X.data;
-    std::vector<int> y_data = y.data;
-
-    std::vector<std::vector<float>> flat_X(10000, std::vector<float>(3));
-    parse_npy(X_data, flat_X, 10000, 3);
-
-    KNN knn(5);
-    knn.fit(flat_X, y_data);
-
-    std::vector<float> sample = {1.2, 0.5, -0.3};
-    int prediction = knn.predict(sample);
-
-    std::cout << "Predicted class: " << prediction << std::endl;
     return 0;
 }
