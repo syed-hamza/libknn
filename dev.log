@@ -1,0 +1,6 @@
+22/02/2025
+- Brute-force algorithm with only compiler optimizations is 
+  17x slower the scikit-learn KNN with brute-force algorithm 
+
+- Optimizations:
+    - use openBLAS/Eigen libraries for euclidean distance
