@@ -21,25 +21,31 @@ float KNN::_euclidean_distance(
     return calculate_root ? std::sqrt(distance) : distance;
 }
 
-float KNN::_get_majority(const std::vector<std::pair<float, float>>& distances){
-    std::map<float, size_t> votes;
-    for (size_t i = 0; i < _k; i++) {
-        votes[distances[i].second]++;
-    }
+float KNN::_get_majority(std::vector<std::pair<float, float>>& distances) {
+    // Use nth_element to get the top-k smallest distances
+    std::nth_element(distances.begin(), distances.begin() + _k, distances.end(),
+                     [](const std::pair<float, float>& a, const std::pair<float, float>& b) {
+                         return a.first < b.first;
+                     });
 
-    // Find the class with the most votes
+    // Count occurrences of each class among the top-k
+    std::unordered_map<float, size_t> votes;
     float predicted_class = -1;
     size_t max_votes = 0;
 
-    for (const auto& [class_, count] : votes) {
-        if (count > max_votes) {
-            max_votes = count;
-            predicted_class = class_;
+    for (size_t i = 0; i < _k; i++) {
+        float label = distances[i].second;
+        votes[label]++;
+
+        if (votes[label] > max_votes) {
+            max_votes = votes[label];
+            predicted_class = label;
         }
     }
 
     return predicted_class;
 }
+
 
 
 // PUBLIC
@@ -82,11 +88,24 @@ float KNN::operator()(const std::vector<float>& X) {
 }
 
 
-std::vector<float> KNN::operator()(const std::vector<std::vector<float>>& X) {
-    std::vector<float> predictions(X.size());  
+std::vector<float> KNN::operator()(const std::vector<std::vector<float>>& X_test) {
+    std::vector<float> predictions(X_test.size());
 
-    for(size_t i = 0; i < X.size(); i++){
-        predictions[i] = (*this)(X[i]);
+    for (size_t test_idx = 0; test_idx < X_test.size(); test_idx++) {
+        std::vector<std::pair<float, float>> distances(_num_samples);
+
+        // Compute distances for this test point
+        for (size_t i = 0; i < _num_samples; i++) {
+            distances[i] = {_euclidean_distance(X_test[test_idx], _X[i], false), _y[i]};
+        }
+
+        // Sort and get majority
+        std::nth_element(distances.begin(), distances.begin() + _k, distances.end(),
+                         [](const std::pair<float, float>& a, const std::pair<float, float>& b) {
+                             return a.first < b.first;
+                         });
+
+        predictions[test_idx] = _get_majority(distances);
     }
 
     return predictions;
