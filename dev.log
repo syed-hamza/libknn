@@ -4,3 +4,11 @@
 
 - Optimizations:
     - use openBLAS/Eigen libraries for euclidean distance
+
+
+23/02/2025
+- Reduced function calls in the prediction function with 
+  STL functions and nested loops
+
+- Brought slowness down to only ~6.1%
+
