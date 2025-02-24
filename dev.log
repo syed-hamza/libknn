@@ -14,5 +14,6 @@
 
 25/02/2025
 - Used STL function inner_product to speed up eulcidean distance calculation calculation
+- Used max heap based nearest neighbour querying
 
 - Current slowness reduction: ~7.1%

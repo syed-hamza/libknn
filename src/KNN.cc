@@ -24,29 +24,41 @@ float KNN::_euclidean_distance(
 
 }
 
-float KNN::_get_majority(std::vector<std::pair<float, float>>& distances) {
-    // Use nth_element to get the top-k smallest distances
-    std::nth_element(distances.begin(), distances.begin() + _k, distances.end(),
-                     [](const std::pair<float, float>& a, const std::pair<float, float>& b) {
-                         return a.first < b.first;
-                     });
+float KNN::_get_majority(const std::vector<float>& query) {
 
-    // Count occurrences of each class among the top-k
-    std::unordered_map<float, size_t> votes;
-    float predicted_class = -1;
-    size_t max_votes = 0;
+    using Pair = std::pair<float, float>;
+    auto cmp = [](const Pair& a, const Pair& b) { return a.first < b.first; };
+    std::priority_queue<Pair, std::vector<Pair>, decltype(cmp)> max_heap(cmp);
 
-    for (size_t i = 0; i < _k; i++) {
-        float label = distances[i].second;
-        votes[label]++;
-
-        if (votes[label] > max_votes) {
-            max_votes = votes[label];
-            predicted_class = label;
+    for (size_t i = 0; i < _num_samples; ++i) {
+        float d = _euclidean_distance(query, _X[i], false);
+        if (max_heap.size() < _k) {
+            max_heap.push({d, _y[i]});
+        } else if (d < max_heap.top().first) {
+            max_heap.pop();
+            max_heap.push({d, _y[i]});
         }
     }
 
+    // Now count votes from the k nearest neighbors
+    std::unordered_map<float, size_t> votes;
+    while (!max_heap.empty()) {
+        votes[max_heap.top().second]++;
+        max_heap.pop();
+    }
+
+    // Determine the majority vote
+    float predicted_class = -1;
+    size_t max_votes = 0;
+    for (const auto& [label, count] : votes) {
+        if (count > max_votes) {
+            max_votes = count;
+            predicted_class = label;
+        }
+    }
+    
     return predicted_class;
+    
 }
 
 
@@ -71,45 +83,21 @@ KNN::KNN(const KNN& other)
 
 
 float KNN::operator()(const std::vector<float>& X) {
-    std::vector<std::pair<float, float>> distances(_num_samples);
 
-    // Compute distances
-    for (size_t i = 0; i < _num_samples; i++) {
-        distances[i] = {_euclidean_distance(X, _X[i], false), _y[i]};
-    }
+    return _get_majority(X);
 
-    // Sort by distance (ascending)
-    std::sort(
-        distances.begin(), 
-        distances.end(),
-        [](const std::pair<float, float>& a, const std::pair<float, float>& b) {
-            return a.first < b.first;
-        }
-    );
-
-    return _get_majority(distances);
 }
 
 
 std::vector<float> KNN::operator()(const std::vector<std::vector<float>>& X_test) {
-    std::vector<float> predictions(X_test.size());
 
-    for (size_t test_idx = 0; test_idx < X_test.size(); test_idx++) {
-        std::vector<std::pair<float, float>> distances(_num_samples);
-
-        // Compute distances for this test point
-        for (size_t i = 0; i < _num_samples; i++) {
-            distances[i] = {_euclidean_distance(X_test[test_idx], _X[i], false), _y[i]};
-        }
-
-        // Sort and get majority
-        std::nth_element(distances.begin(), distances.begin() + _k, distances.end(),
-                         [](const std::pair<float, float>& a, const std::pair<float, float>& b) {
-                             return a.first < b.first;
-                         });
-
-        predictions[test_idx] = _get_majority(distances);
+    std::vector<float> predictions;
+    predictions.reserve(X_test.size());
+    
+    for (const auto& sample : X_test) {
+        predictions.push_back((*this)(sample));
     }
-
+    
     return predictions;
+
 }

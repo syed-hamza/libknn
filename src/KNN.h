@@ -2,10 +2,12 @@
 #define KNN_H
 
 #include <vector>
+#include <queue>
 #include <iostream>
 #include <cstdint>
 #include <cmath>
 #include <unordered_set>
+#include <functional>
 #include <algorithm>
 #include <numeric>
 #include <map>
@@ -25,7 +27,7 @@ private:
 
     float _euclidean_distance(const std::vector<float>& A, const std::vector<float>& B, const bool& calculate_root = true);
     
-    float _get_majority(std::vector<std::pair<float, float>>& distances);
+    float _get_majority(const std::vector<float>& query);
 
 public:
 
