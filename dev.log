@@ -12,3 +12,7 @@
 
 - Brought slowness down to only ~6.1%
 
+25/02/2025
+- Used STL function inner_product to speed up eulcidean distance calculation calculation
+
+- Current slowness reduction: ~7.1%

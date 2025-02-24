@@ -11,14 +11,17 @@ float KNN::_euclidean_distance(
             std::to_string(A.size()) + ", B has " + std::to_string(B.size()));
     }
 
-    float distance = 0.0f;
-
-    for(size_t i = 0; i < A.size(); i++){
-        float diff = A[i] - B[i];
-        distance += diff * diff;
-    }
+    float distance = std::inner_product(
+        A.begin(), 
+        A.end(), 
+        B.begin(), 
+        0.0f, 
+        std::plus<float>(),
+        [](float a, float b){ float diff = a - b; return diff * diff; }
+    );
 
     return calculate_root ? std::sqrt(distance) : distance;
+
 }
 
 float KNN::_get_majority(std::vector<std::pair<float, float>>& distances) {
