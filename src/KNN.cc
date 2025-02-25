@@ -33,10 +33,12 @@ float KNN::_get_majority(const std::vector<float>& query) {
     auto cmp = [](const Pair& a, const Pair& b) { return a.first < b.first; };
     std::priority_queue<Pair, std::vector<Pair>, decltype(cmp)> max_heap(cmp);
 
+    float max_d = 0.0f;
     for (size_t i = 0; i < _num_samples; ++i) {
         float d = _euclidean_distance(query, _X[i], false);
-        if (max_heap.size() < _k) {
+        if (max_heap.size() < _k && d > max_d) {
             max_heap.push({d, _y[i]});
+            max_d = d;
         } else if (d < max_heap.top().first) {
             max_heap.pop();
             max_heap.push({d, _y[i]});
