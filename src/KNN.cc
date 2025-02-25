@@ -46,23 +46,13 @@ float KNN::_get_majority(const std::vector<float>& query) {
     }
 
     // Now count votes from the k nearest neighbors
-    std::unordered_map<float, size_t> votes;
+    std::map<float, size_t> votes;
     while (!max_heap.empty()) {
         votes[max_heap.top().second]++;
         max_heap.pop();
     }
-
-    // Determine the majority vote
-    float predicted_class = -1;
-    size_t max_votes = 0;
-    for (const auto& [label, count] : votes) {
-        if (count > max_votes) {
-            max_votes = count;
-            predicted_class = label;
-        }
-    }
     
-    return predicted_class;
+    return votes.begin()->first;
     
 }
 
