@@ -1,6 +1,8 @@
 import numpy as np
 from time import time
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.metrics import classification_report
+from sklearn.datasets import make_blobs
 from loguru import logger
 
 def execute_experiment(params):
@@ -8,10 +10,13 @@ def execute_experiment(params):
     n = params['n']
     algorithm = params['algorithm']
     iters = params['iters']
-    
-    rng = np.random.RandomState(42)
-    X = rng.uniform(0, 1, (n, m))
-    y = rng.randint(0, 2, n)  
+
+    X, y = make_blobs(
+        n_features = m,
+        n_samples = n,
+        cluster_std = 7.6,
+        centers = 2
+    ) 
     
     fit_perfs = []
     inf_perfs = []
@@ -34,6 +39,8 @@ def execute_experiment(params):
     mean_inf = np.mean(inf_perfs)
     std_inf = np.std(inf_perfs)
 
+    report = classification_report(y, model.predict(X))
+
     print("\n===== Experiment Parameters =====")
     print(f"{'Number of samples':<25}: {m}")
     print(f"{'Number of features':<25}: {n}")
@@ -46,10 +53,13 @@ def execute_experiment(params):
     print(f"{'Inference Time (Mean)':<25}: {mean_inf:7.3f} ms")
     print(f"{'Inference Time (Std Dev)':<25}: {std_inf:7.3f} ms")
 
+    print("\n===== Performance Metrics =====")
+    print(report)
+
 if __name__ == "__main__":
     params = {
         "m": 1000,
-        "n": 10,
+        "n": 100,
         "algorithm": "brute",
         "iters": 500
     }
