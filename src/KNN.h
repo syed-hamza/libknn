@@ -25,13 +25,23 @@ private:
 
     std::uint32_t _k;
 
-    float _euclidean_distance(const std::vector<float>& A, const std::vector<float>& B, const bool& calculate_root = true);
+    constexpr float _square(float x);
+
+    inline float _euclidean_distance(
+        const std::vector<float>& A, 
+        const std::vector<float>& B, 
+        const bool& calculate_root = true
+    );
     
     float _get_majority(const std::vector<float>& query);
 
 public:
 
-    KNN(const std::vector<std::vector<float>>& X, const std::vector<float>& y, const size_t& K=0);
+    KNN(
+        const std::vector<std::vector<float>>& X, 
+        const std::vector<float>& y, 
+        const size_t& K=0
+    );
 
     KNN(const KNN& other);
 

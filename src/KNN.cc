@@ -1,7 +1,10 @@
 #include "KNN.h"
 
 // PRIVATE
-float KNN::_euclidean_distance(
+
+constexpr float KNN::_square(float x) { return x * x; }
+
+inline float KNN::_euclidean_distance(
     const std::vector<float>& A, 
     const std::vector<float>& B, 
     const bool& calculate_root
@@ -17,7 +20,7 @@ float KNN::_euclidean_distance(
         B.begin(), 
         0.0f, 
         std::plus<float>(),
-        [](float a, float b){ float diff = a - b; return diff * diff; }
+        [this](float a, float b){ float diff = a - b; return _square(diff); }
     );
 
     return calculate_root ? std::sqrt(distance) : distance;
@@ -62,9 +65,15 @@ float KNN::_get_majority(const std::vector<float>& query) {
 }
 
 
-
 // PUBLIC
-KNN::KNN(const std::vector<std::vector<float>>& X, const std::vector<float>& y, const size_t& K): _X(X), _y(y) {
+KNN::KNN(
+    const std::vector<std::vector<float>>& X, 
+    const std::vector<float>& y, 
+    const size_t& K
+)
+    : _X(X), 
+      _y(y) {
+
     if(K == 0) { _k = std::sqrt(X.size()); }
     else { _k = K; }
 
@@ -77,9 +86,12 @@ KNN::KNN(const std::vector<std::vector<float>>& X, const std::vector<float>& y, 
 
 
 KNN::KNN(const KNN& other) 
-    : _X(other._X), _y(other._y), _k(other._k), 
+    : _X(other._X), 
+      _y(other._y), 
+      _k(other._k), 
       _num_features(other._num_features), 
-      _num_samples(other._num_samples), _classes(other._classes){};
+      _num_samples(other._num_samples), 
+      _classes(other._classes){};
 
 
 float KNN::operator()(const std::vector<float>& X) {
@@ -91,13 +103,14 @@ float KNN::operator()(const std::vector<float>& X) {
 
 std::vector<float> KNN::operator()(const std::vector<std::vector<float>>& X_test) {
 
-    std::vector<float> predictions;
-    predictions.reserve(X_test.size());
+    std::vector<float> predictions(X_test.size());
     
-    for (const auto& sample : X_test) {
-        predictions.push_back((*this)(sample));
-    }
-    
-    return predictions;
+    std::transform(
+        X_test.begin(), 
+        X_test.end(), 
+        predictions.begin(), 
+        [this](const std::vector<float>& sample) { return (*this)(sample); }
+    );    
 
+    return predictions;
 }
