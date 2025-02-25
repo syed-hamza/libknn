@@ -4,89 +4,155 @@
 #include <numeric>
 #include <cmath>
 #include <iomanip>
+#include <unordered_set>
 #include <npy.hpp>
 
 #include "KNN.h"
+#include "utils.cc"
 
-std::vector<std::vector<float>> reshape(const std::vector<float> &flat_matrix, const size_t &num_columns)
-{
-    if (flat_matrix.size() % num_columns != 0)
-    {
-        throw std::invalid_argument("The flat matrix cannot be divided evenly");
+// Function to create a confusion matrix
+std::vector<std::vector<int>> compute_confusion_matrix(
+    const std::vector<float>& predictions,
+    const std::vector<float>& truths,
+    std::unordered_map<float, int>& label_to_index,
+    std::vector<int>& support
+) {
+    std::unordered_set<float> unique_labels(truths.begin(), truths.end());
+    int num_classes = unique_labels.size();
+
+    // Map labels to indices
+    int index = 0;
+    for (const auto& label : unique_labels) {
+        label_to_index[label] = index++;
     }
 
-    size_t num_rows = flat_matrix.size() / num_columns;
-    std::vector<std::vector<float>> reshaped_matrix(num_rows, std::vector<float>(num_columns));
+    // Initialize confusion matrix
+    std::vector<std::vector<int>> confusion_matrix(num_classes, std::vector<int>(num_classes, 0));
+    support.resize(num_classes, 0);
 
-    for (size_t i = 0; i < num_rows; i++)
-    {
-        for (size_t j = 0; j < num_columns; j++)
-        {
-            reshaped_matrix[i][j] = flat_matrix[i * num_columns + j];
+    // Fill the confusion matrix
+    for (size_t i = 0; i < truths.size(); i++) {
+        int actual = label_to_index[truths[i]];
+        int predicted = label_to_index[predictions[i]];
+        confusion_matrix[actual][predicted]++;
+        support[actual]++;
+    }
+
+    return confusion_matrix;
+}
+
+// Function to compute precision for each class
+std::vector<float> compute_precision(const std::vector<std::vector<int>>& confusion_matrix) {
+    int num_classes = confusion_matrix.size();
+    std::vector<float> precision(num_classes, 0.0f);
+
+    for (int i = 0; i < num_classes; i++) {
+        int TP = confusion_matrix[i][i];
+        int FP = 0;
+        for (int j = 0; j < num_classes; j++) {
+            if (i != j) {
+                FP += confusion_matrix[j][i];  // False Positives
+            }
         }
+        precision[i] = (TP + FP) ? static_cast<float>(TP) / (TP + FP) : 0.0f;
     }
 
-    return reshaped_matrix;
+    return precision;
 }
 
-void bench(const std::vector<std::vector<float>> &X_train,
-           const std::vector<float> &y_train,
-           const std::vector<std::vector<float>> &X_test,
-           const int num_iterations)
-{
+// Function to compute recall for each class
+std::vector<float> compute_recall(const std::vector<std::vector<int>>& confusion_matrix) {
+    int num_classes = confusion_matrix.size();
+    std::vector<float> recall(num_classes, 0.0f);
 
-    std::vector<double> train_times, predict_times;
-
-    for (int i = 0; i < num_iterations; i++)
-    {
-        // Start timing training
-        auto start_train = std::chrono::high_resolution_clock::now();
-        KNN model(X_train, y_train, 0); // Training
-        auto end_train = std::chrono::high_resolution_clock::now();
-
-        // Calculate training time
-        double train_time = std::chrono::duration<double, std::milli>(end_train - start_train).count();
-        train_times.push_back(train_time);
-
-        // Start timing prediction
-        auto start_pred = std::chrono::high_resolution_clock::now();
-        std::vector<float> preds = model(X_test); // Prediction
-        auto end_pred = std::chrono::high_resolution_clock::now();
-
-        // Calculate prediction time
-        double pred_time = std::chrono::duration<double, std::milli>(end_pred - start_pred).count();
-        predict_times.push_back(pred_time);
+    for (int i = 0; i < num_classes; i++) {
+        int TP = confusion_matrix[i][i];
+        int FN = 0;
+        for (int j = 0; j < num_classes; j++) {
+            if (i != j) {
+                FN += confusion_matrix[i][j];  // False Negatives
+            }
+        }
+        recall[i] = (TP + FN) ? static_cast<float>(TP) / (TP + FN) : 0.0f;
     }
 
-    // Compute mean and standard deviation
-    auto mean_std = [](const std::vector<double> &times)
-    {
-        double mean = std::accumulate(times.begin(), times.end(), 0.0) / times.size();
-        double variance = std::accumulate(times.begin(), times.end(), 0.0,
-                                          [mean](double acc, double x)
-                                          { return acc + (x - mean) * (x - mean); }) /
-                          times.size();
-        double std_dev = std::sqrt(variance);
-        return std::make_pair(mean, std_dev);
-    };
-
-    auto [train_mean, train_std] = mean_std(train_times);
-    auto [pred_mean, pred_std] = mean_std(predict_times);
-
-    // Print formatted results
-    std::cout << "===== Experiment Parameters =====" << std::endl;
-    std::cout << std::left << std::setw(24) << "Number of samples" << ": " << X_train.size() + X_test.size() << std::endl;
-    std::cout << std::left << std::setw(24) << "Number of features" << ": " << X_train[0].size() << std::endl;
-    std::cout << std::left << std::setw(24) << "Number of iterations" << ": " << num_iterations << std::endl;
-    std::cout << std::left << std::setw(24) << "Algorithm" << ": brute" << std::endl;
-
-    std::cout << "===== Performance Statistics =====" << std::endl;
-    std::cout << std::fixed << std::setprecision(3);
-    std::cout << std::left << std::setw(24) << "Fit Time (Mean)" << ": " << std::setw(8) << train_mean << " ms" << std::endl;
-    std::cout << std::left << std::setw(24) << "Fit Time (Std Dev)" << ": " << std::setw(8) << train_std << " ms" << std::endl;
-    std::cout << std::left << std::setw(24) << "Inference Time (Mean)" << ": " << std::setw(8) << pred_mean << " ms" << std::endl;
-    std::cout << std::left << std::setw(24) << "Inference Time (Std Dev)" << ": " << std::setw(8) << pred_std << " ms" << std::endl;
+    return recall;
 }
+
+// Function to compute F1-score for each class
+std::vector<float> compute_f1_score(const std::vector<float>& precision, const std::vector<float>& recall) {
+    int num_classes = precision.size();
+    std::vector<float> f1_score(num_classes, 0.0f);
+
+    for (int i = 0; i < num_classes; i++) {
+        f1_score[i] = (precision[i] + recall[i]) ? 2 * (precision[i] * recall[i]) / (precision[i] + recall[i]) : 0.0f;
+    }
+
+    return f1_score;
+}
+
+// Function to generate the classification report
+void classification_report(const std::vector<float>& predictions, const std::vector<float>& truths) {
+    if (predictions.size() != truths.size()) {
+        throw std::invalid_argument("Size mismatch between predictions and ground truths");
+    }
+
+    std::unordered_map<float, int> label_to_index;
+    std::vector<int> support;
+    
+    // Compute confusion matrix
+    std::vector<std::vector<int>> confusion_matrix = compute_confusion_matrix(predictions, truths, label_to_index, support);
+
+    // Compute precision, recall, and F1-score
+    std::vector<float> precision = compute_precision(confusion_matrix);
+    std::vector<float> recall = compute_recall(confusion_matrix);
+    std::vector<float> f1_score = compute_f1_score(precision, recall);
+
+    // Compute macro and weighted averages
+    float macro_precision = 0.0f, macro_recall = 0.0f, macro_f1 = 0.0f;
+    float weighted_precision = 0.0f, weighted_recall = 0.0f, weighted_f1 = 0.0f;
+    int total_samples = 0;
+
+    for (size_t i = 0; i < precision.size(); i++) {
+        macro_precision += precision[i];
+        macro_recall += recall[i];
+        macro_f1 += f1_score[i];
+
+        weighted_precision += precision[i] * support[i];
+        weighted_recall += recall[i] * support[i];
+        weighted_f1 += f1_score[i] * support[i];
+
+        total_samples += support[i];
+    }
+
+    int num_classes = precision.size();
+    macro_precision /= num_classes;
+    macro_recall /= num_classes;
+    macro_f1 /= num_classes;
+
+    if (total_samples > 0) {
+        weighted_precision /= total_samples;
+        weighted_recall /= total_samples;
+        weighted_f1 /= total_samples;
+    }
+
+    // Print classification report
+    std::cout << std::fixed << std::setprecision(4);
+    std::cout << "\nClassification Report:\n";
+    std::cout << "--------------------------------------\n";
+    std::cout << "Class | Precision | Recall | F1-score\n";
+    std::cout << "--------------------------------------\n";
+
+    for (const auto& pair : label_to_index) {
+        int i = pair.second;
+        std::cout << pair.first << "     | " << precision[i] << "     | " << recall[i] << "   | " << f1_score[i] << "\n";
+    }
+
+    std::cout << "--------------------------------------\n";
+    std::cout << "Macro Avg    | " << macro_precision << "   | " << macro_recall << "   | " << macro_f1 << "\n";
+    std::cout << "Weighted Avg | " << weighted_precision << "   | " << weighted_recall << "   | " << weighted_f1 << "\n";
+}
+
 
 int main()
 {
@@ -128,9 +194,11 @@ int main()
     // Call benchmark function
     bench(X_train, y_train, X_test, num_iterations);
 
-    // // Train and predict
-    // KNN model(X_train, y_train, 0);
-    // std::vector<float> preds = model(X_test);
+    // Train and predict
+    KNN model(X_train, y_train, 0);
+    std::vector<float> preds = model(X_test);
+
+    classification_report(preds, y_test);
 
     // // Print results with color formatting
     // std::cout << "\033[1mTruth  : Predicted\033[0m\n"; // Bold header

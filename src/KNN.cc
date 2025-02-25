@@ -30,7 +30,7 @@ KNN::KNN(const std::vector<std::vector<float>>& X, const std::vector<float>& y, 
     _num_features = X[0].size();
 
     std::unordered_set<float> unique_set(y.begin(), y.end());
-    _classes =  std::vector<float>(unique_set.begin(), unique_set.end());
+    _classes = std::vector<float>(unique_set.begin(), unique_set.end());
 }
 
 
