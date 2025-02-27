@@ -4,3 +4,21 @@
 
 - Optimizations:
     - use openBLAS/Eigen libraries for euclidean distance
+
+
+23/02/2025
+- Reduced function calls in the prediction function with 
+  STL functions and nested loops
+
+- Brought slowness down to only ~8.1%
+
+25/02/2025
+- Used STL function inner_product to speed up eulcidean distance calculation calculation
+- Used max heap based nearest neighbour querying
+
+- Current slowness reduction: ~7.1%
+
+26/02/2025
+- Added simple heuristic optimizations to remove redundant calculations
+
+- Current slowness reduction: ~5.0%

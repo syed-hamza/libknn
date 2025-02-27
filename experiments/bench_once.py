@@ -11,18 +11,15 @@ def execute_experiment(params):
     algorithm = params['algorithm']
     iters = params['iters']
 
-    X, y = make_blobs(
-        n_features = m,
-        n_samples = n,
-        cluster_std = 7.6,
-        centers = 2
-    ) 
+    X = np.load("../data/X.npy")
+    y = np.load("../data/y.npy")
+
     
     fit_perfs = []
     inf_perfs = []
     
     for _ in range(iters):
-        model = KNeighborsClassifier(algorithm=algorithm, n_jobs=-1)
+        model = KNeighborsClassifier(algorithm=algorithm, n_jobs=1)
         
         fit_perf_start = time()
         model.fit(X, y)
@@ -59,7 +56,7 @@ def execute_experiment(params):
 if __name__ == "__main__":
     params = {
         "m": 1000,
-        "n": 100,
+        "n": 10,
         "algorithm": "brute",
         "iters": 500
     }
