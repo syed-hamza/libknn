@@ -28,33 +28,32 @@ inline float KNN::_euclidean_distance(
 }
 
 float KNN::_get_majority(const std::vector<float>& query) {
+    using Pair = std::pair<float, float>; // (distance, class)
 
-    using Pair = std::pair<float, float>;
-    auto cmp = [](const Pair& a, const Pair& b) { return a.first < b.first; };
-    std::priority_queue<Pair, std::vector<Pair>, decltype(cmp)> max_heap(cmp);
+    // Store all distances in a vector
+    std::vector<Pair> distances;
+    distances.reserve(_num_samples);
 
-    float max_d = 0.0f;
     for (size_t i = 0; i < _num_samples; ++i) {
         float d = _euclidean_distance(query, _X[i], false);
-        if (max_heap.size() < _k && d > max_d) {
-            max_heap.push({d, _y[i]});
-            max_d = d;
-        } else if (d < max_heap.top().first) {
-            max_heap.pop();
-            max_heap.push({d, _y[i]});
-        }
+        distances.emplace_back(d, _y[i]);
     }
 
-    // Now count votes from the k nearest neighbors
-    std::map<float, size_t> votes;
-    while (!max_heap.empty()) {
-        votes[max_heap.top().second]++;
-        max_heap.pop();
+    // Use std::nth_element to find the k-th smallest distance
+    std::nth_element(distances.begin(), distances.begin() + _k, distances.end(),
+                     [](const Pair& a, const Pair& b) { return a.first < b.first; });
+
+    // Count votes among k nearest neighbors
+    std::unordered_map<float, size_t> votes;
+    for (size_t i = 0; i < _k; ++i) {
+        votes[distances[i].second]++;
     }
-    
-    return votes.begin()->first;
-    
+
+    // Return the class with the highest count
+    return std::max_element(votes.begin(), votes.end(),
+        [](const auto& a, const auto& b) { return a.second < b.second; })->first;
 }
+
 
 
 // PUBLIC
