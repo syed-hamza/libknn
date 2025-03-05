@@ -16,9 +16,9 @@
 int main()
 {
 
-    const size_t num_features = 10;
-    const size_t num_samples = 1000;
-    const int num_iterations = 500; // Number of iterations for benchmarking
+    const size_t num_features = 100;
+    const size_t num_samples = 20000;
+    const int num_iterations = 5; // Number of iterations for benchmarking
 
     std::string X_path = "../data/X.npy";
     std::string y_path = "../data/y.npy";
@@ -29,7 +29,7 @@ int main()
     std::vector<std::vector<float>> X = reshape(X_flat.data, num_features);
     std::vector<float> y = y_flat.data;
 
-    const size_t num_train = 800;
+    const size_t num_train = 10000;
 
     std::vector<std::vector<float>> X_train;
     std::vector<float> y_train;
@@ -51,13 +51,13 @@ int main()
     }
 
     // Call benchmark function
-    bench(X_train, y_train, X_test, num_iterations);
+    bench(X_train, y_train, X_train, num_iterations);
 
     // Train and predict
     KNN model(X_train, y_train, 0);
-    std::vector<float> preds = model(X_test);
+    std::vector<float> preds = model(X_train);
 
-    classification_report(preds, y_test);
+    classification_report(preds, y_train);
 
     // // Print results with color formatting
     // std::cout << "\033[1mTruth  : Predicted\033[0m\n"; // Bold header
