@@ -18,7 +18,7 @@ int main()
 
     const size_t num_features = 100;
     const size_t num_samples = 20000;
-    const int num_iterations = 5; // Number of iterations for benchmarking
+    const int num_iterations = 1; // Number of iterations for benchmarking
 
     std::string X_path = "../data/X.npy";
     std::string y_path = "../data/y.npy";
@@ -54,7 +54,7 @@ int main()
     bench(X_train, y_train, X_train, num_iterations);
 
     // Train and predict
-    KNN model(X_train, y_train, 0);
+    KNN model(X_train, y_train, 5);
     std::vector<float> preds = model(X_train);
 
     classification_report(preds, y_train);

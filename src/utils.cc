@@ -51,7 +51,7 @@ void bench(
 
     for (int i = 0; i < num_iterations; i++){
         auto start_train = std::chrono::high_resolution_clock::now();
-        KNN model(X_train, y_train, 0);
+        KNN model(X_train, y_train, 5);
         auto end_train = std::chrono::high_resolution_clock::now();
         double train_time = std::chrono::duration<double, std::milli>(end_train - start_train).count();
         train_times.push_back(train_time);

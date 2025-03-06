@@ -12,6 +12,7 @@
 #include <numeric>
 #include <map>
 #include <utility>
+#include <omp.h>
 
 class KNN {
 private:

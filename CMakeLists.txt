@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Set optimization flags
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Ofast -march=native -flto -funroll-loops")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2 -Ofast -march=native -fopenmp -funroll-loops")
 
 # Set output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)

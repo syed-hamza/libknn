@@ -70,14 +70,14 @@ def execute_experiment(params):
     print(f"{'Fit Time (Std Dev)':<25}: {std_fit:7.3f} {fit_unit}")
     print(f"{'Inference Time (Mean)':<25}: {mean_inf:7.3f} {inf_unit}")
     print(f"{'Inference Time (Std Dev)':<25}: {std_inf:7.3f} {inf_unit}")
-    print(f"{'Fit Time per Sample':<25}: {fit_time_per_sample:7.6f} {fit_sample_unit}")
-    print(f"{'Inference Time per Sample':<25}: {inf_time_per_sample:7.6f} {inf_sample_unit}")
+    print(f"{'Fit Time per Sample':<25}: {fit_time_per_sample:7.3f} {fit_sample_unit}")
+    print(f"{'Inference Time per Sample':<25}: {inf_time_per_sample:7.3f} {inf_sample_unit}")
 
     print("\n===== Performance Metrics =====")
     print(report)
 
 if __name__ == "__main__":
-    for n_jobs in range(1, 2):
+    for n_jobs in range(1, 13):
         print(f"\n===== Running Experiment with n_jobs={n_jobs} =====")
         params = {
             "n_jobs": n_jobs,
