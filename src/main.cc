@@ -18,7 +18,7 @@ int main()
 
     const size_t num_features = 100;
     const size_t num_samples = 20000;
-    const int num_iterations = 1; // Number of iterations for benchmarking
+    const int num_iterations = 10; // Number of iterations for benchmarking
 
     std::string X_path = "../data/X.npy";
     std::string y_path = "../data/y.npy";

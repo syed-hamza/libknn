@@ -17,6 +17,7 @@
 class KNN {
 private:
     std::vector<std::vector<float>> _X;
+    std::vector<float> _X_norms;
     std::vector<float> _y;
 
     size_t _num_features;
@@ -32,6 +33,11 @@ private:
         const std::vector<float>& A, 
         const std::vector<float>& B, 
         const bool& calculate_root = true
+    );
+
+    inline float _manhattan_distance(
+        const std::vector<float>& A, 
+        const std::vector<float>& B
     );
     
     float _get_majority(const std::vector<float>& query);

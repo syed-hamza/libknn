@@ -8,24 +8,43 @@ inline float KNN::_euclidean_distance(
     const std::vector<float>& A, 
     const std::vector<float>& B, 
     const bool& calculate_root
-){
+) {
     if (A.size() != B.size()) {
         throw std::invalid_argument("Vector size mismatch: A has " + 
             std::to_string(A.size()) + ", B has " + std::to_string(B.size()));
     }
 
+    float dot_product = std::inner_product(A.begin(), A.end(), B.begin(), 0.0f);
+    float norm_A = std::inner_product(A.begin(), A.end(), A.begin(), 0.0f);
+    
+    // **Find index of B in _X** (Only applicable if B is from _X)
+    auto it = std::find(_X.begin(), _X.end(), B);
+    float norm_B = (it == _X.end()) ? 
+                    std::inner_product(B.begin(), B.end(), B.begin(), 0.0f) : _X_norms[it - _X.begin()];
 
-    float distance = std::inner_product(
-        A.begin(), 
-        A.end(), 
-        B.begin(), 
-        0.0f, 
-        std::plus<float>(),
-        [this](float a, float b){ float diff = a - b; return _square(diff); }
-    );
+    float distance = norm_A + norm_B - 2 * dot_product;
+    distance = std::abs(distance); // Prevent negative due to floating-point errors
 
     return calculate_root ? std::sqrt(distance) : distance;
+}
 
+
+
+inline float KNN::_manhattan_distance(
+    const std::vector<float>& A, 
+    const std::vector<float>& B
+) {
+    if (A.size() != B.size()) {
+        throw std::invalid_argument("Vector size mismatch: A has " + 
+            std::to_string(A.size()) + ", B has " + std::to_string(B.size()));
+    }
+    
+    float distance = 0.0f;
+    for(size_t i = 0; i < A.size(); i++){
+        distance += std::abs(A[i] - B[i]);
+    }
+
+    return distance;
 }
 
 float KNN::_get_majority(const std::vector<float>& query) {
@@ -41,7 +60,7 @@ float KNN::_get_majority(const std::vector<float>& query) {
 
         #pragma omp for nowait
         for (size_t i = 0; i < _num_samples; ++i) {
-            float d = _euclidean_distance(query, _X[i], false);
+            float d = _manhattan_distance(query, _X[i]);
 
             if (heap.size() < _k) {
                 heap.emplace(d, _y[i]);  
@@ -78,7 +97,6 @@ float KNN::_get_majority(const std::vector<float>& query) {
 }
 
 
-
 // PUBLIC
 KNN::KNN(
     const std::vector<std::vector<float>>& X, 
@@ -96,6 +114,20 @@ KNN::KNN(
 
     std::unordered_set<float> unique_set(y.begin(), y.end());
     _classes = std::vector<float>(unique_set.begin(), unique_set.end());
+
+    _X_norms.resize(_num_samples);
+
+    std::transform(
+        _X.begin(), 
+        _X.end(), 
+        _X_norms.begin(), 
+        [this](const std::vector<float>& sample) {
+            return std::accumulate(sample.begin(), 
+            sample.end(), 
+            0.0f, 
+            [this](float sum, float val) { return sum + _square(val); });
+        }
+    );
 }
 
 
