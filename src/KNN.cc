@@ -4,56 +4,82 @@
 
 constexpr float KNN::_square(float x) { return x * x; }
 
-inline float KNN::_euclidean_distance(
+inline float KNN::_euclidean_distance(const float* A, const float* B) {
+    float distance = 0.0f;
+    for (size_t i = 0; i < _num_features; i++) {
+        float diff = A[i] - B[i];
+        distance += diff * diff;
+    }
+    return distance;
+}
+
+
+
+inline float KNN::_manhattan_distance(
     const std::vector<float>& A, 
-    const std::vector<float>& B, 
-    const bool& calculate_root
-){
+    const std::vector<float>& B
+) {
     if (A.size() != B.size()) {
         throw std::invalid_argument("Vector size mismatch: A has " + 
             std::to_string(A.size()) + ", B has " + std::to_string(B.size()));
     }
+    
+    float distance = 0.0f;
+    for(size_t i = 0; i < A.size(); i++){
+        distance += std::abs(A[i] - B[i]);
+    }
 
-    float distance = std::inner_product(
-        A.begin(), 
-        A.end(), 
-        B.begin(), 
-        0.0f, 
-        std::plus<float>(),
-        [this](float a, float b){ float diff = a - b; return _square(diff); }
-    );
-
-    return calculate_root ? std::sqrt(distance) : distance;
-
+    return distance;
 }
 
 float KNN::_get_majority(const std::vector<float>& query) {
-    using Pair = std::pair<float, float>; // (distance, class)
+    using Pair = std::pair<float, float>;  // (distance, class)
 
-    // Store all distances in a vector
-    std::vector<Pair> distances;
-    distances.reserve(_num_samples);
+    // Thread-local heaps to avoid contention
+    std::vector<std::priority_queue<Pair>> local_heaps(omp_get_max_threads());
 
-    for (size_t i = 0; i < _num_samples; ++i) {
-        float d = _euclidean_distance(query, _X[i], false);
-        distances.emplace_back(d, _y[i]);
+    #pragma omp parallel
+    {
+        int tid = omp_get_thread_num();
+        auto& heap = local_heaps[tid];
+
+        #pragma omp for nowait
+        for (size_t i = 0; i < _num_samples; ++i) {
+            float d = _euclidean_distance(query.data(), &_X_flat[i * _num_features]); // Faster
+
+            if (heap.size() < _k) {
+                heap.emplace(d, _y[i]);  
+            } else if (d < heap.top().first) {
+                heap.pop();  // Remove farthest
+                heap.emplace(d, _y[i]);
+            }
+        }
     }
 
-    // Use std::nth_element to find the k-th smallest distance
-    std::nth_element(distances.begin(), distances.begin() + _k, distances.end(),
-                     [](const Pair& a, const Pair& b) { return a.first < b.first; });
+    // Merge all heaps into one global min-heap
+    std::priority_queue<Pair> global_heap;
+    for (auto& heap : local_heaps) {
+        while (!heap.empty()) {
+            if (global_heap.size() < _k) {
+                global_heap.push(heap.top());
+            } else if (heap.top().first < global_heap.top().first) {
+                global_heap.pop();
+                global_heap.push(heap.top());
+            }
+            heap.pop();
+        }
+    }
 
-    // Count votes among k nearest neighbors
+    // Voting among k nearest neighbors
     std::unordered_map<float, size_t> votes;
-    for (size_t i = 0; i < _k; ++i) {
-        votes[distances[i].second]++;
+    while (!global_heap.empty()) {
+        votes[global_heap.top().second]++;
+        global_heap.pop();
     }
 
-    // Return the class with the highest count
     return std::max_element(votes.begin(), votes.end(),
-        [](const auto& a, const auto& b) { return a.second < b.second; })->first;
+                            [](const auto& a, const auto& b) { return a.second < b.second; })->first;
 }
-
 
 
 // PUBLIC
@@ -62,8 +88,7 @@ KNN::KNN(
     const std::vector<float>& y, 
     const size_t& K
 )
-    : _X(X), 
-      _y(y) {
+    :_y(y) {
 
     if(K == 0) { _k = std::sqrt(X.size()); }
     else { _k = K; }
@@ -73,12 +98,17 @@ KNN::KNN(
 
     std::unordered_set<float> unique_set(y.begin(), y.end());
     _classes = std::vector<float>(unique_set.begin(), unique_set.end());
+
+    _X_flat.resize(_num_samples * _num_features);
+
+    for (size_t i = 0; i < _num_samples; i++) {
+        std::memcpy(&_X_flat[i * _num_features], X[i].data(), _num_features * sizeof(float));
+    }
 }
 
 
 KNN::KNN(const KNN& other) 
-    : _X(other._X), 
-      _y(other._y), 
+    : _y(other._y), 
       _k(other._k), 
       _num_features(other._num_features), 
       _num_samples(other._num_samples), 
