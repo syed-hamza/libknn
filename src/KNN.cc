@@ -4,28 +4,13 @@
 
 constexpr float KNN::_square(float x) { return x * x; }
 
-inline float KNN::_euclidean_distance(
-    const std::vector<float>& A, 
-    const std::vector<float>& B, 
-    const bool& calculate_root
-) {
-    if (A.size() != B.size()) {
-        throw std::invalid_argument("Vector size mismatch: A has " + 
-            std::to_string(A.size()) + ", B has " + std::to_string(B.size()));
+inline float KNN::_euclidean_distance(const float* A, const float* B) {
+    float distance = 0.0f;
+    for (size_t i = 0; i < _num_features; i++) {
+        float diff = A[i] - B[i];
+        distance += diff * diff;
     }
-
-    float dot_product = std::inner_product(A.begin(), A.end(), B.begin(), 0.0f);
-    float norm_A = std::inner_product(A.begin(), A.end(), A.begin(), 0.0f);
-    
-    // **Find index of B in _X** (Only applicable if B is from _X)
-    auto it = std::find(_X.begin(), _X.end(), B);
-    float norm_B = (it == _X.end()) ? 
-                    std::inner_product(B.begin(), B.end(), B.begin(), 0.0f) : _X_norms[it - _X.begin()];
-
-    float distance = norm_A + norm_B - 2 * dot_product;
-    distance = std::abs(distance); // Prevent negative due to floating-point errors
-
-    return calculate_root ? std::sqrt(distance) : distance;
+    return distance;
 }
 
 
@@ -60,7 +45,7 @@ float KNN::_get_majority(const std::vector<float>& query) {
 
         #pragma omp for nowait
         for (size_t i = 0; i < _num_samples; ++i) {
-            float d = _manhattan_distance(query, _X[i]);
+            float d = _euclidean_distance(query.data(), &_X_flat[i * _num_features]); // Faster
 
             if (heap.size() < _k) {
                 heap.emplace(d, _y[i]);  
@@ -103,8 +88,7 @@ KNN::KNN(
     const std::vector<float>& y, 
     const size_t& K
 )
-    : _X(X), 
-      _y(y) {
+    :_y(y) {
 
     if(K == 0) { _k = std::sqrt(X.size()); }
     else { _k = K; }
@@ -115,25 +99,16 @@ KNN::KNN(
     std::unordered_set<float> unique_set(y.begin(), y.end());
     _classes = std::vector<float>(unique_set.begin(), unique_set.end());
 
-    _X_norms.resize(_num_samples);
+    _X_flat.resize(_num_samples * _num_features);
 
-    std::transform(
-        _X.begin(), 
-        _X.end(), 
-        _X_norms.begin(), 
-        [this](const std::vector<float>& sample) {
-            return std::accumulate(sample.begin(), 
-            sample.end(), 
-            0.0f, 
-            [this](float sum, float val) { return sum + _square(val); });
-        }
-    );
+    for (size_t i = 0; i < _num_samples; i++) {
+        std::memcpy(&_X_flat[i * _num_features], X[i].data(), _num_features * sizeof(float));
+    }
 }
 
 
 KNN::KNN(const KNN& other) 
-    : _X(other._X), 
-      _y(other._y), 
+    : _y(other._y), 
       _k(other._k), 
       _num_features(other._num_features), 
       _num_samples(other._num_samples), 

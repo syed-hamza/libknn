@@ -4,35 +4,31 @@
 #include <vector>
 #include <queue>
 #include <iostream>
-#include <cstdint>
 #include <cmath>
 #include <unordered_set>
 #include <functional>
 #include <algorithm>
 #include <numeric>
-#include <map>
 #include <utility>
 #include <omp.h>
+#include <cstring>
 
 class KNN {
 private:
-    std::vector<std::vector<float>> _X;
-    std::vector<float> _X_norms;
+    std::vector<float> _X_flat;
     std::vector<float> _y;
+
+    size_t _k;
 
     size_t _num_features;
     size_t _num_samples;
 
     std::vector<float> _classes;
 
-    std::uint32_t _k;
-
     constexpr float _square(float x);
 
     inline float _euclidean_distance(
-        const std::vector<float>& A, 
-        const std::vector<float>& B, 
-        const bool& calculate_root = true
+        const float* A, const float* B
     );
 
     inline float _manhattan_distance(

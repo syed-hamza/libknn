@@ -2,8 +2,8 @@ import numpy as np
 from pprint import pprint
 from sklearn.datasets import make_classification
 
-n_samples = int(1e4)
-n_features = 3
+n_samples = int(2e4)
+n_features = 100
 n_informative = 1
 n_redundant = 1
 n_classes = 2
@@ -24,5 +24,5 @@ y = np.array(dataset[1], dtype=np.float32)
 print(X.shape)
 print(y.shape)
 
-np.save("data/X.npy", X)
-np.save("data/y.npy", y)
+np.save("../data/X.npy", X)
+np.save("../data/y.npy", y)
