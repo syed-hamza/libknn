@@ -22,3 +22,6 @@
 - Added simple heuristic optimizations to remove redundant calculations
 
 - Current slowness reduction: ~5.0%
+
+08/03/25
+- Matched Python performance up to 99%
