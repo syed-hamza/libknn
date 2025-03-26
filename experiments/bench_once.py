@@ -77,7 +77,7 @@ def execute_experiment(params):
     print(report)
 
 if __name__ == "__main__":
-    for n_jobs in range(1, 13):
+    for n_jobs in range(12, 13):
         print(f"\n===== Running Experiment with n_jobs={n_jobs} =====")
         params = {
             "n_jobs": n_jobs,

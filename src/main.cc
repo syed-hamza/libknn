@@ -8,6 +8,7 @@
 #include <npy.hpp>
 
 #include "KNN.h"
+#include "CentroidClassifier.h"
 #include "utils.cc"
 #include "metrics.cc"
 
@@ -16,7 +17,7 @@
 int main()
 {
 
-    const size_t num_features = 100;
+    const size_t num_features = 200;
     const size_t num_samples = 20000;
     const int num_iterations = 10; // Number of iterations for benchmarking
 
@@ -54,7 +55,8 @@ int main()
     bench(X_train, y_train, X_train, num_iterations);
 
     // Train and predict
-    KNN model(X_train, y_train, 5);
+    // KNN model(X_train, y_train, 5);
+    CentroidClassifier model(X_train, y_train);
     std::vector<float> preds = model(X_train);
 
     classification_report(preds, y_train);

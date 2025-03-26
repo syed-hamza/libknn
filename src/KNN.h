@@ -12,6 +12,7 @@
 #include <utility>
 #include <omp.h>
 #include <cstring>
+#include <limits>
 
 class KNN {
 private:
@@ -24,8 +25,6 @@ private:
     size_t _num_samples;
 
     std::vector<float> _classes;
-
-    constexpr float _square(float x);
 
     inline float _euclidean_distance(
         const float* A, const float* B
