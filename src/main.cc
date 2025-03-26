@@ -1,3 +1,19 @@
+/*
+ * Copyright 2025 Siddhant Biradar
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include <chrono>
 #include <vector>
 #include <iostream>
@@ -8,15 +24,14 @@
 #include <npy.hpp>
 
 #include "KNN.h"
+#include "CentroidClassifier.h"
 #include "utils.cc"
 #include "metrics.cc"
-
-
 
 int main()
 {
 
-    const size_t num_features = 100;
+    const size_t num_features = 200;
     const size_t num_samples = 20000;
     const int num_iterations = 10; // Number of iterations for benchmarking
 
@@ -54,7 +69,8 @@ int main()
     bench(X_train, y_train, X_train, num_iterations);
 
     // Train and predict
-    KNN model(X_train, y_train, 5);
+    // KNN model(X_train, y_train, 5);
+    CentroidClassifier model(X_train, y_train);
     std::vector<float> preds = model(X_train);
 
     classification_report(preds, y_train);

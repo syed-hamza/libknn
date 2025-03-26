@@ -9,7 +9,7 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Set optimization flags
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx2 -Ofast -march=native -fopenmp -funroll-loops")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx -Ofast -ftree-vectorize -march=native -fopenmp")
 
 # Set output directories
 set(CMAKE_RUNTIME_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/bin)
@@ -20,6 +20,7 @@ set(CMAKE_ARCHIVE_OUTPUT_DIRECTORY ${CMAKE_BINARY_DIR}/lib)
 add_executable(knn_app
     src/main.cc
     src/KNN.cc
+    src/CentroidClassifier.cc
 )
 
 # Include directories

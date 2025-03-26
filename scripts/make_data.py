@@ -3,7 +3,7 @@ from pprint import pprint
 from sklearn.datasets import make_classification
 
 n_samples = int(2e4)
-n_features = 100
+n_features = 200
 n_informative = 1
 n_redundant = 1
 n_classes = 2

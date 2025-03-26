@@ -1,9 +1,22 @@
+/*
+ * Copyright 2025 Siddhant Biradar
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at:
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
+
 #include "KNN.h"
 
 // PRIVATE
-
-constexpr float KNN::_square(float x) { return x * x; }
-
 inline float KNN::_euclidean_distance(const float* A, const float* B) {
     float distance = 0.0f;
     for (size_t i = 0; i < _num_features; i++) {
@@ -12,7 +25,6 @@ inline float KNN::_euclidean_distance(const float* A, const float* B) {
     }
     return distance;
 }
-
 
 
 inline float KNN::_manhattan_distance(
@@ -32,6 +44,7 @@ inline float KNN::_manhattan_distance(
     return distance;
 }
 
+
 float KNN::_get_majority(const std::vector<float>& query) {
     using Pair = std::pair<float, float>;  // (distance, class)
 
@@ -42,16 +55,19 @@ float KNN::_get_majority(const std::vector<float>& query) {
     {
         int tid = omp_get_thread_num();
         auto& heap = local_heaps[tid];
+        float max_distance = std::numeric_limits<float>::max();
 
         #pragma omp for nowait
         for (size_t i = 0; i < _num_samples; ++i) {
-            float d = _euclidean_distance(query.data(), &_X_flat[i * _num_features]); // Faster
-
-            if (heap.size() < _k) {
-                heap.emplace(d, _y[i]);  
-            } else if (d < heap.top().first) {
-                heap.pop();  // Remove farthest
-                heap.emplace(d, _y[i]);
+            float d = _euclidean_distance(query.data(), &_X_flat[i * _num_features]);
+            if(d < max_distance){
+                if (heap.size() < _k) {
+                    heap.emplace(d, _y[i]);  
+                } else if (d < heap.top().first) {
+                    heap.pop();  // Remove farthest
+                    heap.emplace(d, _y[i]);
+                }
+                max_distance = d;
             }
         }
     }
@@ -61,10 +77,10 @@ float KNN::_get_majority(const std::vector<float>& query) {
     for (auto& heap : local_heaps) {
         while (!heap.empty()) {
             if (global_heap.size() < _k) {
-                global_heap.push(heap.top());
+                global_heap.push(std::move(heap.top()));
             } else if (heap.top().first < global_heap.top().first) {
                 global_heap.pop();
-                global_heap.push(heap.top());
+                global_heap.push(std::move(heap.top()));
             }
             heap.pop();
         }
@@ -99,7 +115,7 @@ KNN::KNN(
     std::unordered_set<float> unique_set(y.begin(), y.end());
     _classes = std::vector<float>(unique_set.begin(), unique_set.end());
 
-    _X_flat.resize(_num_samples * _num_features);
+    _X_flat.reserve(_num_samples * _num_features);
 
     for (size_t i = 0; i < _num_samples; i++) {
         std::memcpy(&_X_flat[i * _num_features], X[i].data(), _num_features * sizeof(float));
