@@ -1,40 +1,69 @@
-# Generate Data
-```
-mkdir data
-cd data
-```
-Create a python file and copy paste the following code
-```
-import numpy as np
-from sklearn.datasets import make_blobs
+# libknn: A High-Performance K-Nearest Neighbors Library  
 
-num_features = 100
-num_samples = 1000
+## Overview  
+**libknn** is a high-performance K-Nearest Neighbors (KNN) library optimized for modern CPUs. It utilizes **SIMD acceleration (AVX)** and **multi-core parallelism** to deliver fast and efficient computations, making it ideal for high-dimensional data in classification and regression tasks.  
 
-X, y = make_blobs(
-    n_features = num_features,
-    n_samples = num_samples,
-    cluster_std = 7.6,
-    centers = 2
-)
+## Features  
+- Fast and efficient **distance calculations**  
+- Optimized for **high-dimensional data**  
+- Supports **multi-threading** with OpenMP  
 
-print(f"num samples = {num_samples}")
-print(f"num features = {num_features}")
+## Installation  
 
-X = X.astype(np.float32)
-y = y.astype(np.float32)
+### **Prerequisites**  
+- A modern C++ compiler: **GCC (g++), Clang (clang++ 14+), or MSVC**  
+- **CMake** (for building)  
+- **OpenMP** (for multi-threading)  
+- **libnpy**. The benchmark in here uses a header file to load .npy files. Refer [github.com/llohse/libnpy.git](https://github.com/llohse/libnpy.git). 
 
-np.save("X.npy", X)
-np.save("y.npy", y)
-```
+### **Installing OpenMP**  
 
 ## Build
 ```
+#### **Ubuntu**  
+- **For GCC:** OpenMP is included by default.  
+- **For Clang:** Install OpenMP separately:  
+  ```sh
+  sudo apt install libomp-dev -y
+
+### **Windows**  
+- **For GCC (MinGW-w64):** Download a version with OpenMP from [winlibs.com](https://winlibs.com/).  
+- **For MSVC (Visual Studio):** OpenMP is included by default, but you need to enable it:  
+  1. Open **Visual Studio**.  
+  2. Go to **Project Properties** → **C/C++** → **Language**.  
+  3. Set **OpenMP Support** to **Enable (/openmp)**.  
+  4. Click **Apply** and **OK**.  
+  5. If using the command line, compile with:  
+     ```sh
+     cl /openmp test.cpp
+     ```
+
+---
+
+### **macOS**  
+- **Apple Clang does not support OpenMP**. You must install GCC instead:  
+  ```sh
+  brew install gcc
+  ```
+  
+### Ubuntu
+#### **Step 1: install dependencies**
+#### **Step 2: Build libknn**
+```bash
 mkdir build
 cd build
 cmake ..
-make
+make -j$(nproc)
 ```
+## Benchmark
+### Create mock dataset
+```bash
+pip install -r requirements.txt
+mkdir data
+cd scripts
+python make_data.py
+```
+This script creates a dataset with clusters for classification
 
 ## Execution
 ```
@@ -61,3 +90,16 @@ make
 2) Stream proccessing
 3) Thrust library(sorting)
 4) memory transfers
+
+### Python
+```bash
+cd experiments
+python bench_once.py
+```
+
+### libknn
+```bash
+cd build
+./bin/knn_app
+```
+

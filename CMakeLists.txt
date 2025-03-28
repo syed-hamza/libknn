@@ -29,6 +29,8 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 # Set CUDA architectures
 set(CMAKE_CUDA_ARCHITECTURES 60 70 75 80 86)
 set(CMAKE_CUDA_STANDARD 14)
+# Set optimization flags
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -mavx -Ofast -ftree-vectorize -march=native -fopenmp")
 
 # Define build types and optimization flags
 if(CMAKE_BUILD_TYPE STREQUAL "Debug")
@@ -51,6 +53,7 @@ add_executable(knn_app
     src/main.cc
     src/KNN.cc
     src/KNN_cuda.cu
+    src/CentroidClassifier.cc
 )
 
 # Include directories
