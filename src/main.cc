@@ -25,7 +25,11 @@
 #include <cstring>
 
 #include "KNN.h"
+#include "CentroidClassifier.h"
+#include "utils.cc"
+#include "metrics.cc"
 
+// Function to reshape flat matrix to 2D matrix
 std::vector<std::vector<float>> reshape(const std::vector<float> &flat_matrix, const size_t &num_columns)
 {
     if (flat_matrix.size() % num_columns != 0)
@@ -47,17 +51,13 @@ std::vector<std::vector<float>> reshape(const std::vector<float> &flat_matrix, c
     return reshaped_matrix;
 }
 
+// Benchmark function
 void bench(const std::vector<std::vector<float>> &X_train,
            const std::vector<float> &y_train,
            const std::vector<std::vector<float>> &X_test,
            const int num_iterations,
            const bool use_gpu,
            const bool verbose_gpu = false)
-#include "CentroidClassifier.h"
-#include "utils.cc"
-#include "metrics.cc"
-
-int main()
 {
     std::vector<double> train_times, predict_times;
 
@@ -162,6 +162,7 @@ int main()
     std::cout << "\nNote: For detailed GPU metrics, check the output above." << std::endl;
 }
 
+// Main function
 int main(int argc, char** argv)
 {
     bool use_gpu = false;
@@ -181,7 +182,6 @@ int main(int argc, char** argv)
     const size_t num_samples = 10000;
     const int num_iterations = 500; // Number of iterations for benchmarking
 
-
     std::string X_path = "../data/X.npy";
     std::string y_path = "../data/y.npy";
 
@@ -193,7 +193,7 @@ int main(int argc, char** argv)
     std::vector<std::vector<float>> X = reshape(X_flat.data, num_features);
     std::vector<float> y = y_flat.data;
 
-    const size_t num_train = 10000;
+    const size_t num_train = 8000;  // Use 80% for training, adjusted to ensure test set isn't empty
 
     std::vector<std::vector<float>> X_train;
     std::vector<float> y_train;
@@ -225,12 +225,22 @@ int main(int argc, char** argv)
     // Call benchmark function
     bench(X_train, y_train, X_test, num_iterations, use_gpu, verbose_gpu_monitoring);
 
-    // Train and predict
-    // KNN model(X_train, y_train, 5);
-    CentroidClassifier model(X_train, y_train);
-    std::vector<float> preds = model(X_train);
-
-    classification_report(preds, y_train);
+    // Example of using KNN and CentroidClassifier models
+    std::cout << "\nTraining and evaluating models on the dataset..." << std::endl;
+    
+    // Create and evaluate KNN model
+    KNN knn_model(X_train, y_train, 5, use_gpu);
+    std::vector<float> knn_preds = knn_model(X_test);
+    
+    std::cout << "\nKNN Classification Report:" << std::endl;
+    classification_report(knn_preds, y_test);
+    
+    // Create and evaluate CentroidClassifier model
+    CentroidClassifier centroid_model(X_train, y_train);
+    std::vector<float> centroid_preds = centroid_model(X_test);
+    
+    std::cout << "\nCentroid Classifier Report:" << std::endl;
+    classification_report(centroid_preds, y_test);
 
     std::cout << "\nBenchmark completed." << std::endl;
     
